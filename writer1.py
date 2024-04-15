@@ -7,19 +7,18 @@ from math import sqrt
 
 
 def generate_random_data():
-    data_shape = (8, 9, 8)
+    data_shape = (4, 5, 4)
     x = np.zeros(data_shape)
     y = np.zeros(data_shape)
     z = np.zeros(data_shape)
-    for i in range(0, 8):
-        for j in range(0, 9):
-            for k in range(0, 8):
-                x[i, j, k] = 0.5 + i
-                y[i, j, k] = 0.5 + j
-                z[i, j, k] = 0.5 + k
-    u = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 0.5
-    v = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 0.5
-    w = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 0.5
+    for i in range(0, 8, 2):
+        for j in range(0, 9, 2):
+            for k in range(0, 8, 2):
+                ii, jj, kk = int(i / 2), int(j / 2), int(k / 2)
+                x[ii, jj, kk], y[ii, jj, kk], z[ii, jj, kk] = 1 + i, 1 + j, 1 + k
+    u = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 1
+    v = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 1
+    w = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 1
     return x, y, z, u, v, w
 
 
@@ -35,9 +34,11 @@ class Writer:
         [x, y, z, u, v, w] = self.data
         fig = mlab.figure(bgcolor=(1, 1, 1))
         visual.set_viewer(fig)
-        for i in range(0, 8):
-            for j in range(0, 9):
-                for k in range(0, 8):
+        for i in range(0, 4):
+            for j in range(0, 5):
+                for k in range(0, 4):
+                    if (u[i, j, k] == v[i, j, k] == [i, j, k] == 0):
+                        continue
                     circle = self.__draw_circle(
                         x[i, j, k], y[i, j, k], z[i, j, k], u[i, j, k], v[i, j, k], w[i, j, k])
         vectors = mlab.quiver3d(
@@ -46,8 +47,7 @@ class Writer:
 
     def __draw_circle(self, x, y, z, u, v, w, r=0.1, theta1=0, theta2=np.pi * 2, start_color=(1, 0, 0), end_color=(0, 1, 0)):
         #### ====   Normalize Vector   ====####
-        normal_x, normal_y, normal_z = self.__get_normal_vector(
-            x, y, z, u, v, w)
+        normal_x, normal_y, normal_z = self.__get_normal_vector(u, v, w)
         #### ====   Calculate Direction Vector 1   ====####
         vect1_x, vect1_y, vect1_z = self.__get_direction_vector1(
             normal_x, normal_y, normal_z)
@@ -57,30 +57,24 @@ class Writer:
         #### ====   Calculate Circular Points   ====####
         rx, ry, rz = self.__get_circle_points((x, y, z), r, (vect1_x, vect1_y, vect1_z), (
             vect2_x, vect2_y, vect2_z), theta1=theta1, theta2=theta2, segments=30)
-        obj = mlab.plot3d(rx, ry, rz)
+        obj = mlab.plot3d(rx, ry, rz, color=(0, 0, 1),
+                          tube_radius=0.025, line_width=0.1)
         return obj
 
-    def __get_normal_vector(self, x, y, z, u, v, w):
-        unit_x, unit_y, unit_z = u, v, w
+    def __get_normal_vector(self, x, y, z):
+        unit_x, unit_y, unit_z = x, y, z
         length = sqrt(unit_x ** 2 + unit_y ** 2 + unit_z ** 2)
-
-        if length == 0:
-            length == 1
         return unit_x / length, unit_y / length, unit_z / length
 
     def __get_direction_vector1(self, normal_x, normal_y, normal_z):
-        s = 0
         if normal_x <= normal_y and normal_x <= normal_z:
-            if normal_y != 0 or normal_z != 0:
-                s = 1 / (normal_y ** 2 + normal_z ** 2)
+            s = 1 / (normal_y ** 2 + normal_z ** 2)
             return 0., s * normal_z, -1 * s * normal_y
         elif normal_y <= normal_x and normal_y <= normal_z:
-            if normal_x != 0 or normal_z != 0:
-                s = 1 / (normal_x ** 2 + normal_z ** 2)
+            s = 1 / (normal_x ** 2 + normal_z ** 2)
             return s * normal_z, 0, -1 * s * normal_x
         else:
-            if normal_x != 0 or normal_y != 0:
-                s = 1 / (normal_x ** 2 + normal_y ** 2)
+            s = 1 / (normal_x ** 2 + normal_y ** 2)
             return s * normal_y, -1 * s * normal_x, 0
 
     def __get_vector_product(self, vector1, normal):
@@ -101,6 +95,6 @@ class Writer:
 
 
 if __name__ == "__main__":
-    x, y, z, u, v, w = generate_random_data()
+    data = np.load('data1.npy')
     writer = Writer()
-    writer.visualize([x, y, z, u, v, w])
+    writer.visualize(data)
