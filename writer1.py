@@ -37,7 +37,7 @@ class Writer:
         for i in range(0, 4):
             for j in range(0, 5):
                 for k in range(0, 4):
-                    if (u[i, j, k] == v[i, j, k] == [i, j, k] == 0):
+                    if (u[i, j, k] == 0 and v[i, j, k] == 0 and w[i, j, k] == 0):
                         continue
                     circle = self.__draw_circle(
                         x[i, j, k], y[i, j, k], z[i, j, k], u[i, j, k], v[i, j, k], w[i, j, k])
