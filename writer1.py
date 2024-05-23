@@ -96,5 +96,6 @@ class Writer:
 
 if __name__ == "__main__":
     data = np.load('data1.npy')
+    print(data)
     writer = Writer()
     writer.visualize(data)
