@@ -5,9 +5,10 @@ from drawnow import drawnow
 
 from math import sqrt
 
+data_shape = (4, 5, 4)
+
 
 def generate_random_data():
-    data_shape = (4, 5, 4)
     x = np.zeros(data_shape)
     y = np.zeros(data_shape)
     z = np.zeros(data_shape)
@@ -20,6 +21,21 @@ def generate_random_data():
     v = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 1
     w = np.random.rand(data_shape[0], data_shape[1], data_shape[2]) - 1
     return x, y, z, u, v, w
+
+
+def orthogonal_vector(vector):
+    vector = np.array(vector)
+    if vector[0] == 0 and vector[1] == 0:
+        orthogonal = np.array([1, 0, 0])
+    else:
+        orthogonal = np.array([vector[1], -vector[0], 0])
+    orthogonal_vector = np.cross(vector, orthogonal)
+    unit_u, unit_v, unit_w = orthogonal_vector[0], orthogonal_vector[1], orthogonal_vector[2]
+    length = sqrt(unit_u ** 2 + unit_v ** 2 + unit_w ** 2)
+    if length == 0:
+        return [0, 0, 0]
+    else:
+        return [unit_u / length, unit_v / length, unit_w / length]
 
 
 class Writer:
@@ -37,15 +53,21 @@ class Writer:
         for i in range(0, 4):
             for j in range(0, 5):
                 for k in range(0, 4):
-                    if (u[i, j, k] == 0 and v[i, j, k] == 0 and w[i, j, k] == 0):
-                        continue
-                    circle = self.__draw_circle(
-                        x[i, j, k], y[i, j, k], z[i, j, k], u[i, j, k], v[i, j, k], w[i, j, k])
-        vectors = mlab.quiver3d(
-            x, y, z, u, v, w, line_width=3, scale_factor=1, color=(0, 0, 1))
+                    circle1 = self.__draw_circle(
+                        x[i, j, k], y[i, j, k], z[i, j, k], u[i, j, k], v[i, j, k], w[i, j, k], color=(1, 0, 0))
+                    udot, vdot, wdot = orthogonal_vector(
+                        [u[i, j, k], v[i, j, k], w[i, j, k]])
+                    circle2 = self.__draw_circle(
+                        x[i, j, k], y[i, j, k], z[i, j, k], udot, vdot, wdot, color=(0, 0, 1))
+                    vector1 = mlab.quiver3d(x[i, j, k], y[i, j, k], z[i, j, k], u[i, j, k],
+                                            v[i, j, k], w[i, j, k], line_width=3, scale_factor=1, color=(1, 0, 0))
+                    vector2 = mlab.quiver3d(
+                        x[i, j, k], y[i, j, k], z[i, j, k], udot, vdot, wdot, line_width=3, scale_factor=1, color=(0, 0, 1))
+        # vectors = mlab.quiver3d(x, y, z, u, v, w, line_width = 3, scale_factor = 1, color = (0, 0, 1))
+        # vectors = mlab.quiver3d(xdot, ydot, zdot, udot, vdot, wdot, line_width = 3, scale_factor = 1, color = (1, 0, 0))
         mlab.show()
 
-    def __draw_circle(self, x, y, z, u, v, w, r=0.1, theta1=0, theta2=np.pi * 2, start_color=(1, 0, 0), end_color=(0, 1, 0)):
+    def __draw_circle(self, x, y, z, u, v, w, r=0.03, theta1=0, theta2=np.pi * 2, color=(0, 0, 1)):
         #### ====   Normalize Vector   ====####
         normal_x, normal_y, normal_z = self.__get_normal_vector(u, v, w)
         #### ====   Calculate Direction Vector 1   ====####
@@ -57,24 +79,32 @@ class Writer:
         #### ====   Calculate Circular Points   ====####
         rx, ry, rz = self.__get_circle_points((x, y, z), r, (vect1_x, vect1_y, vect1_z), (
             vect2_x, vect2_y, vect2_z), theta1=theta1, theta2=theta2, segments=30)
-        obj = mlab.plot3d(rx, ry, rz, color=(0, 0, 1),
-                          tube_radius=0.025, line_width=0.1)
+        obj = mlab.plot3d(rx, ry, rz, color=color,
+                          tube_radius=0.01, line_width=0.01)
         return obj
 
     def __get_normal_vector(self, x, y, z):
         unit_x, unit_y, unit_z = x, y, z
         length = sqrt(unit_x ** 2 + unit_y ** 2 + unit_z ** 2)
-        return unit_x / length, unit_y / length, unit_z / length
+        if length == 0:
+            return 0, 0, 0
+        else:
+            return unit_x / length, unit_y / length, unit_z / length
 
     def __get_direction_vector1(self, normal_x, normal_y, normal_z):
-        if normal_x <= normal_y and normal_x <= normal_z:
-            s = 1 / (normal_y ** 2 + normal_z ** 2)
+        norm_xy = normal_x ** 2 + normal_y ** 2
+        norm_xz = normal_x ** 2 + normal_z ** 2
+        norm_yz = normal_y ** 2 + normal_z ** 2
+        if norm_xy == 0 and norm_yz == 0 and norm_xz == 0:
+            return 0, 0, 0
+        elif normal_x <= normal_y and normal_x <= normal_z:
+            s = 1 / norm_yz
             return 0., s * normal_z, -1 * s * normal_y
         elif normal_y <= normal_x and normal_y <= normal_z:
-            s = 1 / (normal_x ** 2 + normal_z ** 2)
+            s = 1 / norm_xz
             return s * normal_z, 0, -1 * s * normal_x
         else:
-            s = 1 / (normal_x ** 2 + normal_y ** 2)
+            s = 1 / norm_xy
             return s * normal_y, -1 * s * normal_x, 0
 
     def __get_vector_product(self, vector1, normal):
@@ -96,6 +126,7 @@ class Writer:
 
 if __name__ == "__main__":
     data = np.load('data1.npy')
-    print(data)
+    [x, y, z, u, v, w] = data
     writer = Writer()
     writer.visualize(data)
+    # generate_random_data()
